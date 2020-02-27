@@ -10,8 +10,12 @@ resource "aws_key_pair" "frontkey" {
 resource "aws_instance" "frontend" {
   ami           = "${var.ami_ec2}"
   instance_type = "${var.instance_type}"
-  subnet_id     = "${var.public_subnets_id["${count.index}"]}"
   key_name = "${aws_key_pair.frontkey.key_name}"
+
+  subnet_id     = "${var.public_subnets_id["${count.index}"]}"
+  security_groups = list("${var.frontend_sg_id}")
+
+
   tags = {
       Name = "${var.instance_name}"
       Index = "${count.index}"

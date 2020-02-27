@@ -16,5 +16,6 @@ module "frontend" {
     
     public_subnets_id = "${module.network.public_subnets_id}"
     nb_instance = "${var.nb_instance}"
+    frontend_sg_id = "${module.network.frontend_sg_id}"
     
 }
