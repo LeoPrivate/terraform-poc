@@ -4,15 +4,15 @@ module "sshkey" {
   key_name = "${var.key_name}"
 }
 
-resource "aws_security_group" "open_website" {
-  name        = "open_website"
-  description = "Allow traffic on 8080"
+resource "aws_security_group" "open_backend" {
+  name        = "open_backend"
+  description = "Allow traffic on 3000"
   vpc_id      = "${var.vpc_id}"
   ingress {
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = 3000
+    to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = "${var.public_subnets_cidr}"
   }
 
   ingress {
@@ -23,36 +23,36 @@ resource "aws_security_group" "open_website" {
   }
 }
 
-module "instances-frontend" {
+module "instances-backend" {
   source        = "../../common/aws/ec2"
-  instance_name = "frontend"
+  instance_name = "backend"
 
-  subnets_id  = "${var.public_subnets_id}"
+  subnets_id  = "${var.private_subnets_id}"
   nb_instance = "${var.nb_instance}"
-  sg_id       = "${aws_security_group.open_website.id}"
+  sg_id       = "${aws_security_group.open_backend.id}"
 
   key_name = "${var.key_name}"
 }
 
 module "elb_http" {
   source = "terraform-aws-modules/elb/aws"
-  name   = "elb-front"
+  name   = "elb-back"
 
-  subnets         = "${var.public_subnets_id}"
-  security_groups = ["${aws_security_group.open_website.id}"]
-  internal        = false
+  subnets         = "${var.private_subnets_id}"
+  security_groups = ["${aws_security_group.open_backend.id}"]
+  internal        = true
 
   listener = [
     {
-      instance_port     = 8080
+      instance_port     = 3000
       instance_protocol = "HTTP"
-      lb_port           = 80
+      lb_port           = 3000
       lb_protocol       = "HTTP"
     }
   ]
 
   health_check = {
-    target              = "HTTP:8080/"
+    target              = "HTTP:3000/"
     interval            = 30
     healthy_threshold   = 2
     unhealthy_threshold = 2
@@ -60,5 +60,5 @@ module "elb_http" {
   }
 
   number_of_instances = 2
-  instances           = "${module.instances-frontend.instances_ids}"
+  instances           = "${module.instances-backend.instances_ids}"
 }
